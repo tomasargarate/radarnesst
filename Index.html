@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NESsT Portfolio Support Ecosystem</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f7f6f2; color: #1a1a18; min-height: 100vh; }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 28px 24px 40px; }
+
+  .header { margin-bottom: 20px; }
+  .header h1 { font-size: 17px; font-weight: 700; color: #1a1a18; line-height: 1.3; margin-bottom: 5px; }
+  .header p  { font-size: 12px; color: #6b6a64; line-height: 1.5; max-width: 780px; }
+
+  /* Filter bar */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    margin-bottom: 16px;
+  }
+  .filters span { font-size: 12px; color: #6b6a64; margin-right: 4px; }
+  .filter-btn {
+    border: 1.5px solid; border-radius: 20px;
+    padding: 4px 14px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .15s; background: #fff;
+    letter-spacing: .03em;
+  }
+  .filter-btn.active { color: #fff !important; }
+  .filter-btn:hover { opacity: .85; }
+  .filter-btn.reset {
+    border-color: #c8c7c0; color: #6b6a64; background: #fff;
+  }
+  .filter-btn.reset.active { background: #444; border-color: #444; color: #fff; }
+
+  /* Canvas area */
+  #wrap { position: relative; width: 100%; background: #fff;
+    border: 1px solid #e5e4de; border-radius: 12px; overflow: hidden; }
+  canvas { display: block; width: 100%; }
+
+  /* Tooltip */
+  #tip {
+    position: absolute; pointer-events: none; opacity: 0;
+    background: #fff; border: 1px solid #d8d7d0;
+    border-radius: 10px; padding: 10px 14px;
+    font-size: 12px; color: #1a1a18; max-width: 230px;
+    line-height: 1.6; transition: opacity .12s;
+    box-shadow: 0 4px 16px rgba(0,0,0,.10);
+  }
+  #tip strong { font-size: 13px; display: block; margin-bottom: 2px; }
+  #tip .tag {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    padding: 1px 7px; border-radius: 10px; margin-bottom: 4px;
+    letter-spacing: .03em;
+  }
+  #tip .row { color: #6b6a64; font-size: 11.5px; }
+  #tip .row b { color: #1a1a18; font-weight: 600; }
+
+  /* Info panel */
+  #info {
+    display: none; position: absolute; right: 16px; top: 16px;
+    background: #fff; border: 1px solid #d8d7d0; border-radius: 10px;
+    padding: 14px 16px; font-size: 12px; color: #1a1a18;
+    max-width: 280px; line-height: 1.6;
+    box-shadow: 0 4px 16px rgba(0,0,0,.08);
+  }
+  #info .close-btn {
+    position: absolute; top: 8px; right: 10px;
+    font-size: 16px; color: #999; cursor: pointer; line-height: 1;
+    background: none; border: none;
+  }
+  #info strong { font-size: 13px; display: block; margin-bottom: 6px; }
+  #info .row { color: #6b6a64; margin-bottom: 2px; }
+  #info .row b { color: #1a1a18; }
+  #info .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  #info .chip {
+    font-size: 10px; padding: 2px 8px; border-radius: 10px;
+    background: #f1f0ea; color: #444; font-weight: 500;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 8px 18px;
+    padding: 14px 0 2px; font-size: 12px; color: #6b6a64;
+  }
+  .leg-item { display: flex; align-items: center; gap: 5px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  .footnote { font-size: 11px; color: #999; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <h1>NESsT Portfolio Support Ecosystem – by Country (mapped mentions, not exhaustive)</h1>
+    <p>NESsT at the centre as a cross-cutting link. Ecosystem actors are grouped by country around each cluster. Actor mentions were mapped as an approximation to understand the broader support ecosystem — this is not a comprehensive mapping.</p>
+  </div>
+
+  <div class="filters">
+    <span>Filter by country:</span>
+    <button class="filter-btn reset active" data-country="all">All countries</button>
+    <button class="filter-btn" data-country="Chile"    style="border-color:#C04828;color:#C04828">Chile</button>
+    <button class="filter-btn" data-country="Colombia" style="border-color:#BA7517;color:#BA7517">Colombia</button>
+    <button class="filter-btn" data-country="Peru"     style="border-color:#185FA5;color:#185FA5">Peru</button>
+    <button class="filter-btn" data-country="Brasil"   style="border-color:#0F6E56;color:#0F6E56">Brazil</button>
+    <button class="filter-btn" data-country="Regional" style="border-color:#7F77DD;color:#7F77DD">Regional</button>
+  </div>
+
+  <div id="wrap">
+    <canvas id="cv"></canvas>
+    <div id="tip"></div>
+    <div id="info">
+      <button class="close-btn" id="closeInfo">×</button>
+      <strong id="info-title"></strong>
+      <div id="info-body"></div>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+  <p class="footnote">Source: Actor mentions recorded during evaluation interviews and NESsT programme documents. Mapped as an approximation of the support ecosystem — not exhaustive. Own elaboration.</p>
+
+</div>
+
+<script>
+// ── Palette ──────────────────────────────────────────────────────────────────
+const PL = {
+  nesst:      {f:'#534AB7', s:'#3C3489'},
+  empresa:    {f:'#1D9E75', s:'#0F6E56'},
+  publica:    {f:'#378ADD', s:'#185FA5'},
+  aceleradora:{f:'#EF9F27', s:'#BA7517'},
+  banca:      {f:'#888780', s:'#5F5E5A'},
+  fondo:      {f:'#D85A30', s:'#993C1D'},
+  coop:       {f:'#D4537E', s:'#993556'},
+  otro:       {f:'#639922', s:'#3B6D11'},
+};
+function gp(t) {
+  t = (t||'').toLowerCase();
+  if (t.includes('public institution')) return PL.publica;
+  if (t.includes('accelerator'))        return PL.aceleradora;
+  if (t.includes('banking'))            return PL.banca;
+  if (t.includes('fund')||t.includes('investor')||t.includes('capital')) return PL.fondo;
+  if (t.includes('international cooperation')) return PL.coop;
+  return PL.otro;
+}
+function rg(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgba(${r},${g},${b},${a})`}
+function pillRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+// ── Country config ────────────────────────────────────────────────────────────
+const CC = {Chile:'#C04828', Colombia:'#BA7517', Peru:'#185FA5', Brasil:'#0F6E56'};
+const CL_OFF = {Chile:{ax:-1,ay:-1}, Colombia:{ax:1,ay:-1}, Peru:{ax:-1,ay:1}, Brasil:{ax:1,ay:1}};
+const COUNTRY_LABEL = {Chile:'CHILE', Colombia:'COLOMBIA', Peru:'PERU', Brasil:'BRAZIL'};
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+const ACTORS = [
+  {id:'CORFO',       lab:'CORFO',          tipo:'Public institution',         p:'Chile'},
+  {id:'INDAP',       lab:'INDAP',           tipo:'Public institution',         p:'Chile'},
+  {id:'Sercotec',    lab:'Sercotec',        tipo:'Public institution',         p:'Chile'},
+  {id:'StartupChile',lab:'Start-Up Chile',  tipo:'Accelerator',                p:'Chile'},
+  {id:'Magical',     lab:'Magical Startups',tipo:'Accelerator',                p:'Chile'},
+  {id:'BancoEstado', lab:'Banco Estado',    tipo:'Banking',                    p:'Chile'},
+  {id:'Uper',        lab:'Uper',            tipo:'Other',                      p:'Chile'},
+  {id:'Elementa',    lab:'Elementa Foods',  tipo:'Fund / Investor',            p:'Chile'},
+  {id:'SENA',        lab:'SENA',            tipo:'Public institution',         p:'Colombia'},
+  {id:'SocialSkin',  lab:'Social Skin',     tipo:'Accelerator',                p:'Colombia'},
+  {id:'Impactamos',  lab:'Impactamos',      tipo:'Accelerator',                p:'Colombia'},
+  {id:'ProColombia', lab:'ProColombia',     tipo:'Public institution',         p:'Colombia'},
+  {id:'ROCapital',   lab:'RO Capital',      tipo:'Fund / Investor',            p:'Colombia'},
+  {id:'EAN',         lab:'EAN Impacta',     tipo:'Other',                      p:'Colombia'},
+  {id:'UKPACT',      lab:'UK PACT',         tipo:'International cooperation',  p:'Colombia'},
+  {id:'USAID',       lab:'USAID',           tipo:'International cooperation',  p:'Colombia'},
+  {id:'ProInnova',   lab:'ProInnóvate',     tipo:'Public institution',         p:'Peru'},
+  {id:'Profonampe',  lab:'Profonampe',      tipo:'Fund / Investor',            p:'Peru'},
+  {id:'FRomero',     lab:'Fund. Romero',    tipo:'Fund / Investor',            p:'Peru'},
+  {id:'FWiese',      lab:'Fund. Wiese',     tipo:'Fund / Investor',            p:'Peru'},
+  {id:'Kunan',       lab:'Kunan',           tipo:'Other',                      p:'Peru'},
+  {id:'Credicorp',   lab:'Credicorp Cap.',  tipo:'Other',                      p:'Peru'},
+  {id:'Sitawi',      lab:'Sitawi',          tipo:'Fund / Investor',            p:'Brasil'},
+  {id:'BNDES',       lab:'BNDES',           tipo:'Banking',                    p:'Brasil'},
+  {id:'BcoNordeste', lab:'Bco. Nordeste',   tipo:'Banking',                    p:'Brasil'},
+  {id:'Acumen',      lab:'Acumen',          tipo:'Fund / Investor',            p:'Regional'},
+  {id:'Agora',       lab:'Agora Part.',     tipo:'Accelerator',                p:'Regional'},
+  {id:'BIDLab',      lab:'BID Lab',         tipo:'International cooperation',  p:'Regional'},
+  {id:'GIZ',         lab:'GIZ',             tipo:'International cooperation',  p:'Regional'},
+  {id:'WholePlanet', lab:'Whole Planet',    tipo:'Fund / Investor',            p:'Regional'},
+  {id:'Kiva',        lab:'Kiva',            tipo:'Fund / Investor',            p:'Regional'},
+];
+
+const ENTS = [
+  {id:'Ecocitex',      p:'Chile',    a:['CORFO'],                              year:2021, traj:'resilience', sector:'Circular economy / textile recycling',   desc:'Produces recycled yarn and textile products from discarded clothing.'},
+  {id:'NG Seeds',      p:'Chile',    a:['CORFO','Elementa','BIDLab'],           year:2021, traj:'stabilization',sector:'Sustainable agriculture / seeds',       desc:'Develops and commercialises native and organic seeds for small-scale farmers.'},
+  {id:'Wenkimey',      p:'Chile',    a:['CORFO','INDAP','Sercotec'],            year:2022, traj:'growth',     sector:'Indigenous craft / fair trade',          desc:'Commercialises Mapuche artisanal products through fair-trade channels.'},
+  {id:'Ágil',          p:'Chile',    a:['CORFO'],                              year:2024, traj:'resilience', sector:'Inclusive employment / logistics',        desc:'Employs people with disabilities in last-mile delivery and logistics services.'},
+  {id:'Alma del Panal',p:'Chile',    a:['CORFO','INDAP'],                      year:2024, traj:'growth',     sector:'Beekeeping / natural products',          desc:'Produces and commercialises honey and bee-derived products from small producers.'},
+  {id:'Rewe',          p:'Chile',    a:['INDAP','Sercotec'],                   year:2022, traj:'resilience', sector:'Agroecology / rural cooperative',         desc:'Cooperative of small farmers producing and marketing organic vegetables.'},
+  {id:'Savia',         p:'Chile',    a:['StartupChile','Uper'],                year:2021, traj:'growth',     sector:'Green value chain / plant-based food',   desc:'Produces plant-based food ingredients sourced from smallholder farmers.'},
+  {id:'Lazarillo',     p:'Chile',    a:['Magical','BancoEstado'],              year:2021, traj:'growth',     sector:'Tech / accessibility / assistive tech',  desc:'Develops navigation and mapping technology for people with visual impairment.'},
+  {id:'Okolo',         p:'Colombia', a:['SENA'],                               year:2024, traj:'growth',     sector:'Circular economy / waste management',    desc:'Manages post-consumer packaging waste through circular economy models.'},
+  {id:'Disruptia',     p:'Colombia', a:['SocialSkin','Impactamos','EAN','USAID'],year:2024,traj:'resilience',sector:'Tech / social impact services',           desc:'Provides tech-enabled services that generate employment for vulnerable populations.'},
+  {id:'SiembraCo',     p:'Colombia', a:['SocialSkin'],                         year:2024, traj:'growth',     sector:'Rural agriculture / food systems',       desc:'Connects small rural producers to urban markets through digital platforms.'},
+  {id:'FCC',           p:'Colombia', a:['ProColombia','ROCapital'],            year:2024, traj:'stabilization',sector:'Indigenous agriculture / green value chain',desc:'Campesino federation integrating smallholder farmers into formal value chains.'},
+  {id:'Selva Nevada',  p:'Colombia', a:['UKPACT','Acumen'],                   year:2024, traj:'growth',     sector:'Bioeconomy / non-timber forest products', desc:'Harvests and commercialises non-timber forest products with indigenous communities.'},
+  {id:'Agrosolidaria', p:'Colombia', a:['USAID','GIZ'],                       year:2021, traj:'growth',     sector:'Rural cooperative / agri-food',          desc:'Cooperative linking smallholder farmers to B2B markets through technical support.'},
+  {id:'Novatio',       p:'Colombia', a:['BIDLab'],                            year:2024, traj:'growth',     sector:'Sanitation / WASH / social infrastructure',desc:'Provides affordable sanitation and water access solutions for low-income communities.'},
+  {id:'Amazóniko',     p:'Colombia', a:['Acumen'],                            year:2024, traj:'growth',     sector:'Bioeconomy / Amazonian products',         desc:'Commercialises Amazonian food and cosmetic products sourced from local communities.'},
+  {id:'Empanacombi',   p:'Peru',     a:['FRomero','FWiese','Kunan'],          year:2022, traj:'stabilization',sector:'Inclusive employment / food service',   desc:'Food business employing people with disabilities across its production and sales chain.'},
+  {id:'PesCo',         p:'Peru',     a:['ProInnova','Credicorp','Agora','GIZ'],year:2021,traj:'resilience', sector:'Fisheries / sustainable seafood',        desc:'Organises small-scale fishing cooperatives to access formal and export markets.'},
+  {id:'Orígenes',      p:'Peru',     a:['Credicorp','Kiva'],                  year:2024, traj:'resilience', sector:'Artisanal craft / indigenous communities',desc:'Connects indigenous artisans to national and international fair-trade markets.'},
+  {id:'Plastic Corp.', p:'Peru',     a:['ProInnova'],                         year:2024, traj:'growth',     sector:'Circular economy / plastic recycling',   desc:'Recycles post-consumer plastics into construction and industrial raw materials.'},
+  {id:'AFIMAD',        p:'Peru',     a:['Profonampe','BIDLab'],               year:2023, traj:'growth',     sector:'Forestry / bioeconomy / Amazon',         desc:'Manages sustainable timber and non-timber forest products in Amazonian territories.'},
+  {id:'Coopersapó',    p:'Brasil',   a:['Sitawi','WholePlanet'],              year:2024, traj:'growth',     sector:'Bioeconomy / Amazonian ingredients',     desc:'Cooperative of Amazonian extractivists producing and selling native forest products.'},
+  {id:'ManejeBem',     p:'Brasil',   a:['Sitawi'],                            year:2022, traj:'resilience', sector:'Tech / environmental management',         desc:'SaaS platform for rural environmental compliance and land management.'},
+  {id:'Maré de Sab.',  p:'Brasil',   a:['BNDES'],                            year:2021, traj:'resilience', sector:'Inclusive employment / food / women',     desc:'Employs low-income women in food production and catering services.'},
+  {id:'Plantus',       p:'Brasil',   a:['BcoNordeste'],                       year:2024, traj:'stabilization',sector:'Sustainable agriculture / agri-inputs', desc:'Produces biological agri-inputs to reduce pesticide use among smallholder farmers.'},
+];
+
+// ── Label collision resolver ──────────────────────────────────────────────────
+function resolveLabels(labels, iters) {
+  iters = iters || 400;
+  for (let it = 0; it < iters; it++) {
+    let moved = false;
+    for (let i = 0; i < labels.length; i++) {
+      for (let j = i+1; j < labels.length; j++) {
+        const a = labels[i], b = labels[j];
+        const gX = a.hw + b.hw + 8, gY = a.hh + b.hh + 7;
+        const dx = b.lx - a.lx, dy = b.ly - a.ly;
+        if (Math.abs(dx) < gX && Math.abs(dy) < gY) {
+          const ovX = gX - Math.abs(dx), ovY = gY - Math.abs(dy);
+          if (ovY <= ovX) {
+            const push = ovY/2 + 1, dir = dy >= 0 ? 1 : -1;
+            a.ly -= dir*push; b.ly += dir*push;
+          } else {
+            const push = ovX/2 + 1, dir = dx >= 0 ? 1 : -1;
+            a.lx -= dir*push; b.lx += dir*push;
+          }
+          moved = true;
+        }
+      }
+    }
+    if (!moved) break;
+  }
+}
+
+// ── Canvas setup ──────────────────────────────────────────────────────────────
+const canvas = document.getElementById('cv');
+const ctx    = canvas.getContext('2d');
+const wrap   = document.getElementById('wrap');
+const tip    = document.getElementById('tip');
+const info   = document.getElementById('info');
+
+let nodes = {}, W = 0, H = 0, dpr = 1;
+let hov = null, clicked = null, activeCountry = 'all';
+let clusterDefs = [], clusterR = 0;
+
+function mw(str) {
+  ctx.font = '500 10px Arial,sans-serif';
+  return ctx.measureText(str).width;
+}
+
+function buildNodes() {
+  nodes = {};
+  clusterDefs = [
+    {p:'Chile',    gx:W*0.25, gy:H*0.265},
+    {p:'Colombia', gx:W*0.75, gy:H*0.265},
+    {p:'Peru',     gx:W*0.25, gy:H*0.735},
+    {p:'Brasil',   gx:W*0.75, gy:H*0.735},
+  ];
+  clusterR = Math.min(W,H) * 0.185;
+  const entR = clusterR * 0.38;
+  const actR = clusterR * 0.74;
+
+  clusterDefs.forEach(({p, gx, gy}) => {
+    const ents = ENTS.filter(e => e.p === p);
+    const acts = ACTORS.filter(a => a.p === p);
+    ents.forEach((e, i) => {
+      const ang = (2*Math.PI*i/ents.length) - Math.PI/2;
+      nodes[e.id] = {x:gx+entR*Math.cos(ang), y:gy+entR*Math.sin(ang), type:'e', p, lab:e.id, r:8, gx, gy};
+    });
+    acts.forEach((a, i) => {
+      const ang = (2*Math.PI*i/acts.length) - Math.PI/2;
+      nodes[a.id] = {x:gx+actR*Math.cos(ang), y:gy+actR*Math.sin(ang), type:'a', tipo:a.tipo, p, lab:a.lab, r:7, gx, gy};
+    });
+
+    // Resolve actor label positions (include enterprise labels in combined pass)
+    const actLbls = acts.map(a => {
+      const n = nodes[a.id];
+      const ang = Math.atan2(n.y-gy, n.x-gx);
+      const tw = mw(a.lab);
+      return {id:a.id, lx:n.x+(n.r+15)*Math.cos(ang), ly:n.y+(n.r+15)*Math.sin(ang), hw:tw/2+4, hh:8};
+    });
+    const entLbls = ents.map(e => {
+      const n = nodes[e.id];
+      const ang = Math.atan2(n.y-gy, n.x-gx);
+      const lx = n.x+(n.r+10)*Math.cos(ang), ly = n.y+(n.r+10)*Math.sin(ang);
+      const tw = ctx.measureText(e.id).width;
+      return {lx, ly, hw:tw/2+2, hh:6};
+    });
+    const combined = [...actLbls, ...entLbls];
+    resolveLabels(combined, 500);
+    actLbls.forEach((l, i) => { l.lx = combined[i].lx; l.ly = combined[i].ly; });
+
+    // Manual nudges for persistent overlaps
+    actLbls.forEach(l => {
+      if (l.id === 'Impactamos') { l.lx += 22; l.ly -= 8; }
+      if (l.id === 'BNDES')      { l.lx += 20; l.ly += 12; }
+      if (l.id === 'Sercotec')   { l.ly -= 12; l.lx += 4; }
+      if (l.id === 'Kunan')      { l.lx -= 10; l.ly += 10; }
+    });
+    actLbls.forEach(l => { nodes[l.id].lx = l.lx; nodes[l.id].ly = l.ly; });
+  });
+
+  // NESsT
+  nodes['NESsT'] = {x:W/2, y:H/2, type:'n', lab:'NESsT', r:18};
+
+  // Regional actors
+  const regA = ACTORS.filter(a => a.p === 'Regional');
+  const regR = Math.min(W,H) * 0.095;
+  const regLbls = regA.map((a, i) => {
+    const ang = (2*Math.PI*i/regA.length) - Math.PI/2;
+    const nx = W/2+regR*Math.cos(ang), ny = H/2+regR*Math.sin(ang);
+    nodes[a.id] = {x:nx, y:ny, type:'a', tipo:a.tipo, p:'Regional', lab:a.lab, r:7, gx:W/2, gy:H/2};
+    const tw = mw(a.lab);
+    return {id:a.id, lx:nx+(7+15)*Math.cos(ang), ly:ny+(7+15)*Math.sin(ang), hw:tw/2+4, hh:8};
+  });
+  resolveLabels(regLbls, 400);
+  regLbls.forEach(l => { nodes[l.id].lx = l.lx; nodes[l.id].ly = l.ly; });
+}
+
+// ── Connection logic ──────────────────────────────────────────────────────────
+function getConn(id) {
+  const s = new Set([id]);
+  ENTS.forEach(e => {
+    if (e.id === id)       { s.add('NESsT'); e.a.forEach(x => s.add(x)); }
+    if (id === 'NESsT')    s.add(e.id);
+    if (e.a.includes(id))  { s.add(e.id); s.add('NESsT'); }
+  });
+  return s;
+}
+
+function countryVisible(p) {
+  if (activeCountry === 'all') return true;
+  if (p === 'Regional') return true; // regional always shown
+  return p === activeCountry;
+}
+
+// ── Draw ──────────────────────────────────────────────────────────────────────
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  const focus = clicked || hov;
+  const conn  = focus ? getConn(focus) : null;
+  const tpri  = 'rgba(38,38,36,0.9)';
+
+  // ── Cluster backgrounds ──
+  clusterDefs.forEach(({p, gx, gy}) => {
+    const visible = countryVisible(p);
+    const c = CC[p];
+    ctx.save();
+    ctx.globalAlpha = visible ? 1 : 0.15;
+    ctx.beginPath(); ctx.arc(gx, gy, clusterR, 0, 2*Math.PI);
+    ctx.fillStyle   = rg(c, 0.07); ctx.fill();
+    ctx.strokeStyle = rg(c, 0.25); ctx.lineWidth = 1;
+    ctx.setLineDash([5,4]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+  });
+
+  // ── Country labels outside circles ──
+  clusterDefs.forEach(({p, gx, gy}) => {
+    const visible = countryVisible(p);
+    const c = CC[p];
+    const off = CL_OFF[p];
+    const lx = gx + off.ax * (clusterR + 14) * 0.72;
+    const ly = gy + off.ay * (clusterR + 14) * 0.72;
+    ctx.save();
+    ctx.globalAlpha = visible ? 1 : 0.2;
+    ctx.font = '700 12px Arial,sans-serif';
+    ctx.textAlign    = off.ax < 0 ? 'right' : 'left';
+    ctx.textBaseline = off.ay < 0 ? 'bottom' : 'top';
+    ctx.fillStyle    = rg(c, 0.92);
+    ctx.fillText(COUNTRY_LABEL[p], lx, ly);
+    ctx.restore();
+  });
+
+  // ── Regional zone ──
+  const regR = Math.min(W,H)*0.095;
+  ctx.beginPath(); ctx.arc(W/2, H/2, regR+36, 0, 2*Math.PI);
+  ctx.fillStyle   = rg('#7F77DD', 0.06); ctx.fill();
+  ctx.strokeStyle = rg('#7F77DD', 0.18); ctx.lineWidth = 1;
+  ctx.setLineDash([3,4]); ctx.stroke(); ctx.setLineDash([]);
+  ctx.font = '700 9px Arial,sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillStyle = rg('#534AB7', 0.7);
+  ctx.fillText('REGIONAL', W/2, H/2 - regR - 39);
+
+  // ── Edges NESsT → enterprises ──
+  const nst = nodes['NESsT'];
+  ENTS.forEach(e => {
+    const ent = nodes[e.id]; if (!ent || !nst) return;
+    const visible = countryVisible(e.p);
+    const hi  = conn && conn.has('NESsT') && conn.has(e.id);
+    const dim = (conn && !hi) || !visible;
+    ctx.beginPath(); ctx.moveTo(nst.x, nst.y); ctx.lineTo(ent.x, ent.y);
+    ctx.strokeStyle = dim ? rg('#534AB7',.03) : hi ? rg('#534AB7',.75) : rg('#534AB7',.11);
+    ctx.lineWidth = hi ? 1.8 : 0.5;
+    ctx.setLineDash(hi ? [] : [4,4]); ctx.stroke(); ctx.setLineDash([]);
+  });
+
+  // ── Edges enterprise → actors ──
+  ENTS.forEach(e => {
+    const ent = nodes[e.id]; if (!ent) return;
+    const visible = countryVisible(e.p);
+    e.a.forEach(aid => {
+      const act = nodes[aid]; if (!act) return;
+      const hi  = conn && conn.has(e.id) && conn.has(aid);
+      const dim = (conn && !hi) || !visible;
+      const isR = ACTORS.find(a => a.id === aid)?.p === 'Regional';
+      const base = isR ? '#7F77DD' : '#888780';
+      ctx.beginPath(); ctx.moveTo(ent.x, ent.y); ctx.lineTo(act.x, act.y);
+      ctx.strokeStyle = dim ? rg(base,.03) : hi ? rg('#1D9E75',.85) : rg(base, isR?.4:.28);
+      ctx.lineWidth = hi ? 2 : 0.65;
+      ctx.setLineDash(hi ? [] : [3,4]); ctx.stroke(); ctx.setLineDash([]);
+    });
+  });
+
+  // ── Nodes ──
+  Object.entries(nodes).forEach(([id, n]) => {
+    const pal = n.type==='n' ? PL.nesst : n.type==='e' ? PL.empresa : gp(n.tipo);
+    const isH = hov===id || clicked===id;
+    const visible = n.type==='n' ? true : countryVisible(n.p);
+    const dim = (conn && !conn.has(id)) || !visible;
+    ctx.save();
+    ctx.globalAlpha = dim ? 0.12 : 1;
+    if (isH) { ctx.shadowColor = pal.f; ctx.shadowBlur = 14; }
+    ctx.beginPath(); ctx.arc(n.x, n.y, n.r + (isH?2:0), 0, 2*Math.PI);
+    ctx.fillStyle = pal.f; ctx.fill();
+    ctx.strokeStyle = pal.s; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  });
+
+  // ── Enterprise & NESsT labels ──
+  Object.entries(nodes).forEach(([id, n]) => {
+    if (n.type !== 'e' && n.type !== 'n') return;
+    const visible = n.type==='n' ? true : countryVisible(n.p);
+    const dim = (conn && !conn.has(id)) || !visible;
+    ctx.save(); ctx.globalAlpha = dim ? 0.1 : 1;
+    if (n.type === 'n') {
+      ctx.font = '600 13px Arial,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = tpri;
+      ctx.fillText('NESsT', n.x, n.y + n.r + 14);
+    } else {
+      const ang = Math.atan2(n.y-n.gy, n.x-n.gx);
+      const lx  = n.x + (n.r+10)*Math.cos(ang);
+      const ly  = n.y + (n.r+10)*Math.sin(ang);
+      const align = lx < n.gx-15 ? 'right' : lx > n.gx+15 ? 'left' : 'center';
+      ctx.font = '11px Arial,sans-serif';
+      ctx.textAlign = align; ctx.textBaseline = 'middle';
+      ctx.fillStyle = tpri;
+      ctx.fillText(n.lab, lx, ly);
+    }
+    ctx.restore();
+  });
+
+  // ── Actor labels ──
+  Object.entries(nodes).forEach(([id, n]) => {
+    if (n.type !== 'a' || n.lx === undefined) return;
+    const pal     = gp(n.tipo);
+    const visible = countryVisible(n.p);
+    const dim     = (conn && !conn.has(id)) || !visible;
+    ctx.save(); ctx.globalAlpha = dim ? 0.1 : 1;
+    ctx.font = '500 10px Arial,sans-serif';
+    const tw    = ctx.measureText(n.lab).width;
+    const align = n.lx < n.gx-15 ? 'right' : n.lx > n.gx+15 ? 'left' : 'center';
+    let bx = n.lx - (align==='right' ? tw : align==='center' ? tw/2 : 0);
+    // pill bg
+    ctx.fillStyle = rg(pal.f, 0.14);
+    pillRect(ctx, bx-3, n.ly-7, tw+6, 14, 3); ctx.fill();
+    // leader line
+    ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(n.lx, n.ly);
+    ctx.strokeStyle = rg(pal.f, 0.2); ctx.lineWidth = 0.5;
+    ctx.setLineDash([2,3]); ctx.stroke(); ctx.setLineDash([]);
+    // text
+    ctx.textAlign = align; ctx.textBaseline = 'middle';
+    ctx.fillStyle = pal.s;
+    ctx.fillText(n.lab, n.lx, n.ly);
+    ctx.restore();
+  });
+}
+
+// ── Interaction ────────────────────────────────────────────────────────────────
+function getAt(mx, my) {
+  let best = null, minD = 22;
+  Object.entries(nodes).forEach(([id, n]) => {
+    const d = Math.hypot(mx-n.x, my-n.y);
+    if (d < n.r+10 && d < minD) { minD = d; best = id; }
+  });
+  return best;
+}
+
+function showTooltip(id, mx, my) {
+  const n   = nodes[id];
+  const pal = n.type==='n' ? PL.nesst : n.type==='e' ? PL.empresa : gp(n.tipo);
+
+  let html = `<strong>${id}</strong>`;
+
+  if (n.type === 'e') {
+    const ent = ENTS.find(e => e.id === id);
+    html += `<div class="tag" style="background:${rg(pal.f,.15)};color:${pal.s}">Portfolio enterprise · ${n.p}</div>`;
+    const others = ent?.a.map(x => ACTORS.find(a=>a.id===x)?.lab || x) || [];
+    html += `<div class="row">NESsT support: <b>✓</b></div>`;
+    html += `<div class="row">Other actors: <b>${others.length > 0 ? others.join(', ') : 'NESsT only'}</b></div>`;
+    html += `<div class="row" style="margin-top:4px;font-size:11px;color:#aaa">Click to pin</div>`;
+  } else if (n.type === 'a') {
+    const linked = ENTS.filter(e => e.a.includes(id));
+    html += `<div class="tag" style="background:${rg(pal.f,.15)};color:${pal.s}">${n.tipo} · ${n.p}</div>`;
+    html += `<div class="row">Supports: <b>${linked.map(e=>e.id).join(', ') || '—'}</b></div>`;
+    html += `<div class="row" style="margin-top:4px;font-size:11px;color:#aaa">Click to pin</div>`;
+  } else {
+    html += `<div class="tag" style="background:${rg(pal.f,.15)};color:${pal.s}">Cross-cutting · all countries</div>`;
+    html += `<div class="row">Connected to all <b>${ENTS.length}</b> portfolio enterprises</div>`;
+  }
+
+  tip.innerHTML = html;
+  tip.style.opacity = '1';
+  const tx = Math.min(mx+14, W-240);
+  const ty = Math.max(my-10, 10);
+  tip.style.left = tx + 'px';
+  tip.style.top  = ty + 'px';
+}
+
+const TRAJ_CONFIG = {
+  growth:       {label:'Growth',       color:'#1D9E75', bg:'#E1F5EE'},
+  stabilization:{label:'Stabilization',color:'#BA7517', bg:'#FAEEDA'},
+  resilience:   {label:'Resilience',   color:'#993C1D', bg:'#FAECE7'},
+};
+
+function showInfoPanel(id) {
+  const n   = nodes[id];
+  const pal = n.type==='n' ? PL.nesst : n.type==='e' ? PL.empresa : gp(n.tipo);
+
+  document.getElementById('info-title').textContent = id;
+
+  let body = '';
+  if (n.type === 'e') {
+    const ent    = ENTS.find(e => e.id === id);
+    const others = ent?.a.map(x => ACTORS.find(a=>a.id===x)?.lab || x) || [];
+    const tc     = TRAJ_CONFIG[ent?.traj] || {};
+
+    // Description
+    if (ent?.desc) {
+      body += `<div style="font-size:11.5px;color:#444;line-height:1.5;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #eee">${ent.desc}</div>`;
+    }
+
+    // Key fields
+    body += `<div class="row">Country: <b>${n.p}</b></div>`;
+    if (ent?.year) body += `<div class="row">In programme since: <b>${ent.year}</b></div>`;
+    if (ent?.sector) body += `<div class="row">Sector: <b>${ent.sector}</b></div>`;
+
+    // Trajectory badge
+    if (tc.label) {
+      body += `<div style="margin:8px 0 6px">
+        <span style="display:inline-block;font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${tc.bg};color:${tc.color};letter-spacing:.04em">
+          ${tc.label.toUpperCase()}
+        </span>
+        <span style="font-size:10px;color:#aaa;margin-left:6px">business trajectory (Phase 2)</span>
+      </div>`;
+    }
+
+    // Support divider
+    body += `<div style="border-top:1px solid #eee;margin:8px 0 8px"></div>`;
+    body += `<div style="font-size:11px;font-weight:700;color:#888;letter-spacing:.05em;margin-bottom:6px">SUPPORT ECOSYSTEM</div>`;
+
+    // NESsT chip
+    body += `<div style="margin-bottom:4px;font-size:11.5px;color:#534AB7;font-weight:600">● NESsT <span style="font-weight:400;color:#888;font-size:11px">(financial + technical assistance)</span></div>`;
+
+    // Other actors chips
+    if (others.length) {
+      body += `<div class="row" style="margin-bottom:4px">Other ecosystem actors:</div>`;
+      body += `<div class="chips">${others.map(o => {
+        const act = ACTORS.find(a => a.lab === o || a.id === o);
+        const ap  = act ? gp(act.tipo) : PL.otro;
+        return `<span class="chip" style="background:${rg(ap.f,.12)};color:${ap.s}">${o}</span>`;
+      }).join('')}</div>`;
+    } else {
+      body += `<div class="row">Other actors: <b>NESsT only</b></div>`;
+    }
+
+  } else if (n.type === 'a') {
+    const linked = ENTS.filter(e => e.a.includes(id));
+    body += `<div class="row">Type: <b>${n.tipo}</b></div>`;
+    body += `<div class="row">Country: <b>${n.p}</b></div>`;
+    if (linked.length) {
+      body += `<div class="row" style="margin-top:8px;margin-bottom:4px">Portfolio enterprises supported:</div>`;
+      body += `<div class="chips">${linked.map(e => {
+        const tc = TRAJ_CONFIG[e.traj] || {};
+        return `<span class="chip" style="background:${tc.bg||'#f1f0ea'};color:${tc.color||'#444'}">${e.id}</span>`;
+      }).join('')}</div>`;
+    }
+  } else {
+    body += `<div class="row">Role: <b>Cross-cutting link</b></div>`;
+    body += `<div class="row">Countries: <b>Chile, Colombia, Peru, Brazil</b></div>`;
+    body += `<div class="row" style="margin-top:4px">Connected to all <b>${ENTS.length}</b> portfolio enterprises with financial and technical support.</div>`;
+  }
+
+  document.getElementById('info-body').innerHTML = body;
+  info.style.display = 'block';
+}
+
+canvas.addEventListener('mousemove', evt => {
+  const rect = canvas.getBoundingClientRect();
+  const mx   = evt.clientX - rect.left;
+  const my   = evt.clientY - rect.top;
+  const found = getAt(mx, my);
+  if (found !== hov) { hov = found; canvas.style.cursor = found ? 'pointer' : 'default'; draw(); }
+  if (found) showTooltip(found, mx, my);
+  else tip.style.opacity = '0';
+});
+
+canvas.addEventListener('mouseleave', () => {
+  hov = null; tip.style.opacity = '0';
+  canvas.style.cursor = 'default'; draw();
+});
+
+canvas.addEventListener('click', evt => {
+  const rect  = canvas.getBoundingClientRect();
+  const mx    = evt.clientX - rect.left;
+  const my    = evt.clientY - rect.top;
+  const found = getAt(mx, my);
+  if (found && found === clicked) {
+    clicked = null; info.style.display = 'none';
+  } else if (found) {
+    clicked = found;
+    showInfoPanel(found);
+  } else {
+    clicked = null; info.style.display = 'none';
+  }
+  draw();
+});
+
+document.getElementById('closeInfo').addEventListener('click', () => {
+  clicked = null; info.style.display = 'none'; draw();
+});
+
+// ── Country filter buttons ────────────────────────────────────────────────────
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const country = btn.dataset.country;
+    activeCountry = country;
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.remove('active');
+      b.style.background = '#fff';
+      b.style.color = b.dataset.country === 'all' ? '#6b6a64' :
+        {Chile:'#C04828',Colombia:'#BA7517',Peru:'#185FA5',Brasil:'#0F6E56',Regional:'#7F77DD'}[b.dataset.country];
+    });
+    btn.classList.add('active');
+    if (country === 'all') {
+      btn.style.background = '#444'; btn.style.color = '#fff';
+    } else {
+      const c = {Chile:'#C04828',Colombia:'#BA7517',Peru:'#185FA5',Brasil:'#0F6E56',Regional:'#7F77DD'}[country];
+      btn.style.background = c; btn.style.color = '#fff';
+    }
+    clicked = null; info.style.display = 'none';
+    draw();
+  });
+});
+
+// ── Legend ────────────────────────────────────────────────────────────────────
+const legData = [
+  {label:'NESsT',                       color:PL.nesst.f},
+  {label:'Portfolio enterprise',         color:PL.empresa.f},
+  {label:'Public institution',           color:PL.publica.f},
+  {label:'Accelerator',                 color:PL.aceleradora.f},
+  {label:'Banking',                     color:PL.banca.f},
+  {label:'Fund / Investor',             color:PL.fondo.f},
+  {label:'International cooperation',   color:PL.coop.f},
+  {label:'Other',                       color:PL.otro.f},
+];
+const lg = document.getElementById('legend');
+legData.forEach(l => {
+  const d = document.createElement('div'); d.className = 'leg-item';
+  d.innerHTML = `<span class="leg-dot" style="background:${l.color}"></span><span>${l.label}</span>`;
+  lg.appendChild(d);
+});
+
+// ── Resize & init ─────────────────────────────────────────────────────────────
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W   = wrap.clientWidth;
+  H   = Math.round(W * 1.02);
+  canvas.style.height = H + 'px';
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  buildNodes();
+  draw();
+}
+
+window.addEventListener('resize', resize);
+resize();
+</script>
+</body>
+</html>
